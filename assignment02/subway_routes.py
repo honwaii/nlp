@@ -153,9 +153,7 @@ def draw_subway_lines(routes):
 	plt.rcParams['font.sans-serif'] = ['SimHei']
 	plt.rcParams['axes.unicode_minus'] = False
 	plt.savefig('./subway_lines.png', bbox_inches='tight')
-
-
-# plt.show()
+	plt.show()
 
 
 def search_with_bfs(graph, start, destination):
@@ -195,7 +193,6 @@ def search(start, end, city):
 	all_paths = search_all_routes(connections, start, end)
 	most_suitable_path = get_suitable_path(all_paths, get_stations_info(routes))
 	route = reduce(lambda x, y: x + '->' + y, most_suitable_path)
-	print()
 	print('从 ' + start + ' 到 ' + end + ' 的地铁最合适的路线是: \n' + route + '\n')
 	return
 
