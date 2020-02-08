@@ -103,6 +103,7 @@ def gcj_2_wgs(lon, lat):
 	return wgsLon, wgsLat
 
 
+# 绘制地图网络地图
 def draw_network(routes):
 	stations_info = get_stations_info(routes)
 	print(stations_info)
