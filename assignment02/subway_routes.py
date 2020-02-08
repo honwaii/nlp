@@ -11,8 +11,8 @@ from pypinyin import pinyin, Style
 from collections import defaultdict
 
 city_codes = {"北京": 1100, '上海': 3100, '广州 ': 4401, '深圳': 4403, '香港': 8100, '南京': 3201, '长沙': 4301, '成都': 5101,
-			  '重庆': 5000, '天津': 1200, '沈阳': 2101, '杭州': 3301, '武汉': 4201, '苏州': 3205, '大连': 2102, '长春': 2201,
-			  '西安': 6101, '昆明': 5301, '佛山': 4406, '郑州': 4101, '宁波': 3302, '无锡': 3202, '哈尔滨': 2301}
+			  '重庆': 5000, '天津': 1200, '沈阳': 2101, '杭州': 3301, '武汉': 4201, '苏州': 3205, '大连': 2102, '西安': 6101,
+			  '长春': 2201, '昆明': 5301, '佛山': 4406, '郑州': 4101, '宁波': 3302, '无锡': 3202, '哈尔滨': 2301}
 
 
 def get_subway_routes(city_code, city):
@@ -105,6 +105,7 @@ def gcj_2_wgs(lon, lat):
 
 def draw_network(routes):
 	stations_info = get_stations_info(routes)
+	print(stations_info)
 	subway_graph = nx.Graph()
 	subway_graph.add_nodes_from(list(stations_info.keys()))
 	nx.draw(subway_graph, stations_info, with_labels=True, node_size=5, font_size=5)
@@ -131,10 +132,13 @@ def build_connection(routes):
 		last_two = None
 		for station in stations:
 			if last_one is not None:
-				station_connections[last_one].append(station)
-				station_connections[station].append(last_one)
+				if station not in station_connections[last_one]:
+					station_connections[last_one].append(station)
+				if last_one not in station_connections[station]:
+					station_connections[station].append(last_one)
 			if last_two is not None:
-				station_connections[last_one].append(last_two)
+				if last_two not in station_connections[last_one]:
+					station_connections[last_one].append(last_two)
 			last_two = last_one
 			last_one = station
 	return station_connections
@@ -149,7 +153,9 @@ def draw_subway_lines(routes):
 	plt.rcParams['font.sans-serif'] = ['SimHei']
 	plt.rcParams['axes.unicode_minus'] = False
 	plt.savefig('./subway_lines.png', bbox_inches='tight')
-	plt.show()
+
+
+# plt.show()
 
 
 def search_with_bfs(graph, start, destination):
@@ -175,16 +181,23 @@ def search(start, end, city):
 	city_name = reduce(lambda x, y: x[0] + y[0], pinyin(city, style=Style.NORMAL))
 	subways = get_subway_routes(city_code, city_name)
 	routes = parse_stations(subways)
-	# print(routes)
 	draw_subway_lines(routes)
 	connections = build_connection(routes)
-	rs = search_all_routes(connections, start, end)
-	print(rs)
 	route_stations = search_with_bfs(connections, start, end)
 	if route_stations is None:
-		return '没有找到匹配的路线，请检查城市或站台的名称是否正确.'
+		print('没有找到匹配的路线，请检查城市或站台的名称是否正确.')
+		return
+	print("第二题: 根据查询直接返回查到的第一条线路:")
 	route = reduce(lambda x, y: x + '->' + y, route_stations)
-	return '从 ' + start + ' 到 ' + end + ' 的地铁路线是: ' + route
+	print('从 ' + start + ' 到 ' + end + ' 的地铁路线是: \n' + route + '\n')
+
+	print("第三题: 查询判断最合适的一条路线:")
+	all_paths = search_all_routes(connections, start, end)
+	most_suitable_path = get_suitable_path(all_paths, get_stations_info(routes))
+	route = reduce(lambda x, y: x + '->' + y, most_suitable_path)
+	print()
+	print('从 ' + start + ' 到 ' + end + ' 的地铁最合适的路线是: \n' + route + '\n')
+	return
 
 
 def compute_distance(origin, destination):
@@ -193,26 +206,26 @@ def compute_distance(origin, destination):
 	radius = 6371  # km
 	dlat = math.radians(lat2 - lat1)
 	dlon = math.radians(lon2 - lon1)
-	a = (math.sin(dlat / 2) * math.sin(dlat / 2) +
-		 math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-		 math.sin(dlon / 2) * math.sin(dlon / 2))
+	a = (math.sin(dlat / 2) * math.sin(dlat / 2)
+		 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+		 * math.sin(dlon / 2) * math.sin(dlon / 2))
 	c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 	d = radius * c
 	return d
 
 
 def search_with_dfs(graph, start, destination):
-	pathes = [[start]]  # list 用来存储待搜索路径
+	paths = [[start]]  # list 用来存储待搜索路径
 	visited = set()  # set用来存储已搜索的节点
-	while pathes:
-		path = pathes.pop(0)  # 提取第一条路径
+	while paths:
+		path = paths.pop(0)  # 提取第一条路径
 		frontier = path[-1]  # 提取即将要探索的节点
 		if frontier in visited: continue  # 检查如果该点已经探索过 则不用再探索
 		successors = graph[frontier]
 		for city in successors:  # 遍历子节点
 			if city in path: continue  # check loop #检查会不会形成环
 			new_path = path + [city]
-			pathes.append(new_path)  # bfs     #将新路径加到list里面
+			paths.append(new_path)  # bfs     #将新路径加到list里面
 			# pathes = [new_path] + pathes #dfs
 			if city == destination:  # 检查目的地是不是已经搜索到了
 				return new_path
@@ -220,32 +233,49 @@ def search_with_dfs(graph, start, destination):
 
 
 def search_all_routes(graph, start, destination):
-	pathes = [[start]]
-	visited = set()  # ！
-	while pathes:
-		path = pathes.pop(0)
-		froniter = path[-1]
-		if froniter in visited: continue  # ！
-
-		if froniter == destination:  # ！
-			return path  # ！
-
-		successsors = graph[froniter]
-
-		for city in successsors:
+	paths = []
+	search_list = [[start]]
+	# visited = set()
+	while search_list:
+		path = search_list.pop(0)
+		frontier = path[-1]
+		# if frontier in visited: continue  # 检查如果该点已经探索过 则不用再探索
+		if frontier == destination:
+			paths.append(path)
+			continue
+		successors = graph[frontier]
+		for city in successors:
 			if city in path: continue  # check loop
-
 			new_path = path + [city]
+			search_list.append(new_path)  # bfs
+		# visited.add(frontier)
+		if len(paths) > 5:
+			break
+	print("已至少找到 " + str(len(paths)) + " 条符合的线路.")
+	return paths
 
-			pathes.append(new_path)  # bfs
-		# pathes = search_strategy(pathes)
-		# visited.add(froniter)  # ！
-		# if pathes and (destination == pathes[0][-1]):
-		#     return pathes[0]
-		return pathes
+
+def get_suitable_path(paths, station_info):
+	min_distance_path = None
+	min_distance = 0
+	for path in paths:
+		last_station = None
+		distance = 0
+		for station in path:
+			if last_station:
+				distance = distance + compute_distance(station_info[last_station], station_info[station])
+			last_station = station
+		if min_distance <= 0:
+			min_distance = distance
+			min_distance_path = path
+		if distance < min_distance:
+			min_distance = distance
+			min_distance_path = path
+	paths.sort(key=lambda x: len(x))
+	if len(min_distance_path) < len(paths[0]) - 3:
+		return min_distance_path
+	return paths[0]
 
 
-result = search('临平', '湘湖', '杭州')
-# print(result)
-d = compute_distance((120.252501, 30.236997), (120.041654, 30.358992))
-print(d)
+search('奥体中心', '天安门东', '北京')
+search('近江', '火车东站', '杭州')
