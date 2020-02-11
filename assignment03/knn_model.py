@@ -24,7 +24,6 @@ def knn_model(X, y):
 # 源码中的余弦相似度的计算为啥是1-cos(theta)
 def distance(x1, x2):
     c = cosine(x1, x2)
-    print((x1, x2, c))
     return c
 
 
@@ -34,7 +33,16 @@ def predict(x, k=3):
     return np.mean(y_hats)
 
 
+def draw_graph():
+    return
+
+
+def result():
+    return
+
+
 random_data = np.random.random((40, 2))
+
 X = random_data[:, 0] * 2
 y = [assuming_function(x) for x in X]
 
