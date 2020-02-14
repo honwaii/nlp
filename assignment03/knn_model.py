@@ -27,31 +27,27 @@ def distance(x1, x2):
     return c
 
 
-def predict(x, k=3):
-    most_similar_datas = sorted(knn_model(X, y), key=lambda xi: distance(xi[0], x))
+def draw_graph(x, y):
+    plt.scatter(x, y, c='r')
+    plt.show()
+    return
+
+
+def result(x, k=3):
+    X, Y = generate_training_data()
+    most_similar_datas = sorted(knn_model(X, Y), key=lambda xi: distance(xi[0], x))
     y_hats = [_y for x, _y in most_similar_datas[:k]]
-    return np.mean(y_hats)
-
-
-def draw_graph():
+    predicted = np.mean(y_hats)
+    draw_graph(x, predicted)
     return
 
 
-def result():
-    return
+def generate_training_data():
+    random_data = np.random.random((40, 2))
+    X = random_data[:, 0] * 2
+    Y = [assuming_function(x) for x in X]
+    plt.scatter(X, Y)
+    return X, Y
 
 
-random_data = np.random.random((40, 2))
-
-X = random_data[:, 0] * 2
-y = [assuming_function(x) for x in X]
-
-p1 = predict(0.4)
-p2 = predict(0.8)
-p3 = predict(1.2)
-p4 = predict(1.6)
-p5 = predict(2)
-
-plt.scatter(X, y)
-plt.scatter([0.4, 0.8, 1.2, 1.6, 2], [p1, p2, p3, p4, p5], c='r')
-plt.show()
+result(1)
