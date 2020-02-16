@@ -34,11 +34,6 @@ sub_split_1 = dataset[dataset['family_number'] == 1]['bought'].tolist()
 sub_split_2 = dataset[dataset['family_number'] != 1]['bought'].tolist()
 
 
-print(dataset[dataset['family_number'] == 1])
-print(sub_split_1)
-print(sub_split_2)
-
-
 def entropy(elements):
     counter = Counter(elements)
     probs = [counter[c] / len(elements) for c in set(elements)]
@@ -46,12 +41,34 @@ def entropy(elements):
     return -sum(p * np.log(p) for p in probs)
 
 
+def find_optimal_feature():
+    # 计算各个特征的信息熵，并排序，选取信息熵最小的特征
+    # 选取一个特征之后，再接着选取特征，不断地去找
+    return
+
+
+def find_feature(training_data: pd.DataFrame):
+    return
+
+
+def next_data(training_data: pd.DataFrame, target: str):
+    while True:
+        f, v, flag = find_the_optimal_spilter(training_data, target)
+        if flag:
+            training_data = training_data[f == v]
+        else:
+            training_data = training_data[f != v]
+        # if training_data[f] =
+    return
+
+
+# 返回特征和信息熵
 def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
     x_fields = set(training_data.columns.tolist()) - {target}
     print(x_fields)
     spliter = None
     min_entropy = float('inf')
-
+    flag = False
     for f in x_fields:
         ic(f)
         values = set(training_data[f])
@@ -75,16 +92,22 @@ def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
 
             if entropy_v <= min_entropy:
                 min_entropy = entropy_v
-                spliter = (f, v)
+                if entropy_1 < entropy_2:
+                    flag = True
+                spliter = (f, v, flag)
 
     print('spliter is: {}'.format(spliter))
     print('the min entropy is: {}'.format(min_entropy))
+    print('')
     return spliter
 
 
-fm_n_1 = dataset[dataset['family_number'] == 1]
+def predicate():
+    return
+
+# fm_n_1 = dataset[dataset['family_number'] == 1]
 # fm_n_1[fm_n_1['income'] == '+10']
-find_the_optimal_spilter(training_data=dataset, target='bought')
+# find_the_optimal_spilter(training_data=dataset, target='bought')
 # find_the_optimal_spilter(dataset[dataset['family_number'] == 1], 'bought')
 # print(fm_n_1[fm_n_1['income'] == '+10'])
 # find_the_optimal_spilter(fm_n_1[fm_n_1['income'] == '+10'], 'bought')
