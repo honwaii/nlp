@@ -25,13 +25,28 @@ mock_data = {
 }
 
 
-def decision_tree_model():
-    return
+# 根据训练数据，生成决策树的模型
+def decision_tree_model(training_data: pd.DataFrame, target: str):
+    feature_tree = {}
+    features = []
+    while True:
+        f, v = find_the_optimal_spilter(training_data, target)
+        if f is None:
+            break
+        training_data = training_data[training_data[f] != v]
+        features.append(f)
+        feature_tree[f] = v
+        training_data = training_data.drop(columns=[f])
+        if training_data.shape[1] < 2:
+            break
+    return features, feature_tree
 
 
 dataset = pd.DataFrame.from_dict(mock_data)
-sub_split_1 = dataset[dataset['family_number'] == 1]['bought'].tolist()
-sub_split_2 = dataset[dataset['family_number'] != 1]['bought'].tolist()
+
+
+# sub_split_1 = dataset[dataset['family_number'] == 1]['bought'].tolist()
+# sub_split_2 = dataset[dataset['family_number'] != 1]['bought'].tolist()
 
 
 def entropy(elements):
@@ -41,48 +56,27 @@ def entropy(elements):
     return -sum(p * np.log(p) for p in probs)
 
 
-def find_optimal_feature():
-    # 计算各个特征的信息熵，并排序，选取信息熵最小的特征
-    # 选取一个特征之后，再接着选取特征，不断地去找
-    return
-
-
-def find_feature(training_data: pd.DataFrame):
-    return
-
-
-def next_data(training_data: pd.DataFrame, target: str):
-    while True:
-        f, v, flag = find_the_optimal_spilter(training_data, target)
-        if flag:
-            training_data = training_data[f == v]
-        else:
-            training_data = training_data[f != v]
-        # if training_data[f] =
-    return
-
-
 # 返回特征和信息熵
 def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
+    if training_data.shape[1] < 2:
+        return None
     x_fields = set(training_data.columns.tolist()) - {target}
-    print(x_fields)
     spliter = None
     min_entropy = float('inf')
-    flag = False
     for f in x_fields:
         ic(f)
         values = set(training_data[f])
         ic(values)
         for v in values:
             sub_spliter_1 = training_data[training_data[f] == v][target].tolist()
-            ic(sub_split_1)
+            # ic(sub_split_1)
             # split by the current feature and one value
 
             entropy_1 = entropy(sub_spliter_1)
             ic(entropy_1)
 
             sub_spliter_2 = training_data[training_data[f] != v][target].tolist()
-            ic(sub_split_2)
+            # ic(sub_split_2)
 
             entropy_2 = entropy(sub_spliter_2)
             ic(entropy_2)
@@ -92,9 +86,7 @@ def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
 
             if entropy_v <= min_entropy:
                 min_entropy = entropy_v
-                if entropy_1 < entropy_2:
-                    flag = True
-                spliter = (f, v, flag)
+                spliter = (f, v)
 
     print('spliter is: {}'.format(spliter))
     print('the min entropy is: {}'.format(min_entropy))
@@ -102,10 +94,25 @@ def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
     return spliter
 
 
-def predicate():
+def predicate(features):
+    feature, d = decision_tree_model(dataset, 'bought')
+    print(feature, d)
+    columns = dataset.columns.values.tolist()
+    predict_value = {}
+    for index, v in enumerate(features):
+        predict_value[columns[index]] = v
 
-    return
+    for f in feature:
+        if predict_value[f] != d[f]:
+            return True
 
+    return False
+
+
+r = predicate(["M", "-10", 1])
+print(r)
+# t = decision_tree_model(dataset, 'bought')
+# print(t)
 # fm_n_1 = dataset[dataset['family_number'] == 1]
 # fm_n_1[fm_n_1['income'] == '+10']
 # find_the_optimal_spilter(training_data=dataset, target='bought')
