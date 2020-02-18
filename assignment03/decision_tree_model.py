@@ -14,7 +14,6 @@ mock_data = {
     'gender': ['F', 'F', 'F', 'F', 'M', 'M', 'M'],
     'income': ['+10', '-10', '+10', '+10', '+10', '+10', '-10'],
     'family_number': [1, 2, 2, 1, 1, 1, 2],
-    # 'pet': [1, 1, 1, 0, 0, 0, 1],
     'bought': [1, 1, 1, 0, 0, 0, 1],
 }
 
@@ -49,8 +48,6 @@ def entropy(elements):
 
 # 返回特征和信息熵
 def find_the_optimal_spilter(training_data: pd.DataFrame, target: str) -> str:
-    if training_data.shape[1] <= 2:
-        return
     x_fields = set(training_data.columns.tolist()) - {target}
     spliter = None
     min_entropy = float('inf')
@@ -88,7 +85,6 @@ def predicate(input_feature_values, target: str):
     feature_names, feature_values = decision_tree_model(dataset, target)
     print("需依次判断的特征为: ", feature_names)
     print("各个特征判断为True的值： ", feature_values)
-    print(feature_names, feature_values)
     columns = dataset.columns.values.tolist()
     need_judge = {}
     for index, v in enumerate(input_feature_values):
