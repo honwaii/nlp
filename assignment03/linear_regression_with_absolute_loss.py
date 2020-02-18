@@ -42,42 +42,42 @@ def partial_derivative_k(x, y, y_hat):
 
 def partial_derivative_b(y, y_hat):
     n = len(y)
-    count = 0
+    gradient = 0
     for y_i, y_hat_i in zip(list(y), list(y_hat)):
         if y_i >= y_hat_i:
-            count += 1
-    return (n - 2 * count) / n
+            gradient += -1
+        else:
+            gradient += 1
+    return gradient / n
 
 
-# initialized parameters
+def train():
+    # initialized parameters
+    k = random.random() * 200 - 100  # -100 100
+    b = random.random() * 200 - 100  # -100 100
 
-k = random.random() * 200 - 100  # -100 100
-b = random.random() * 200 - 100  # -100 100
+    learning_rate = 1e-2
 
-learning_rate = 1e-3
+    iteration_num = 2000
+    losses = []
+    for i in range(iteration_num):
+        price_use_current_parameters = [price(r, k, b) for r in X_rm]  # \hat{y}
+        current_loss = loss(y, price_use_current_parameters)
+        losses.append(current_loss)
+        print("Iteration {}, the loss is {}, parameters k is {} and b is {}".format(i, current_loss, k, b))
 
-iteration_num = 200
-losses = []
-for i in range(iteration_num):
-    price_use_current_parameters = [price(r, k, b) for r in X_rm]  # \hat{y}
+        k_gradient = partial_derivative_k(X_rm, y, price_use_current_parameters)
+        b_gradient = partial_derivative_b(y, price_use_current_parameters)
 
-    current_loss = loss(y, price_use_current_parameters)
-    losses.append(current_loss)
-    print("Iteration {}, the loss is {}, parameters k is {} and b is {}".format(i, current_loss, k, b))
+        k = k + (-1 * k_gradient) * learning_rate
+        b = b + (-1 * b_gradient) * learning_rate
+    plt.plot(list(range(iteration_num)), losses)
+    plt.show()
+    return k, b
 
-    k_gradient = partial_derivative_k(X_rm, y, price_use_current_parameters)
-    b_gradient = partial_derivative_b(y, price_use_current_parameters)
 
-    k = k + (-1 * k_gradient) * learning_rate
-    b = b + (-1 * b_gradient) * learning_rate
-best_k = k
-best_b = b
-
-plt.plot(list(range(iteration_num)), losses)
-plt.show()
-
+best_k, best_b = train()
 price_use_best_parameters = [price(r, best_k, best_b) for r in X_rm]
-
+plt.scatter(X_rm, price_use_best_parameters)
 plt.scatter(X_rm, y)
-plt.scatter(X_rm, price_use_current_parameters)
 plt.show()
