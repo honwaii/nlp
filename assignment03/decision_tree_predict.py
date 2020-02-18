@@ -3,7 +3,7 @@
 # @Time    : 2020/2/11 0011 21:11
 # @Author  : honwaii
 # @Email   : honwaii@126.com
-# @File    : decision_tree_model.py
+# @File    : decision_tree_predict.py
 
 from collections import Counter
 from icecream import ic
