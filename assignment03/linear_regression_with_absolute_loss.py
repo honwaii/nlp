@@ -64,7 +64,8 @@ def train():
         price_use_current_parameters = [price(r, k, b) for r in X_rm]  # \hat{y}
         current_loss = loss(y, price_use_current_parameters)
         losses.append(current_loss)
-        print("Iteration {}, the loss is {}, parameters k is {} and b is {}".format(i, current_loss, k, b))
+        if i % 100 == 0:
+            print("Iteration {}, the loss is {}, parameters k is {} and b is {}".format(i, current_loss, k, b))
 
         k_gradient = partial_derivative_k(X_rm, y, price_use_current_parameters)
         b_gradient = partial_derivative_b(y, price_use_current_parameters)
