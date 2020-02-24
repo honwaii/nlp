@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 digits = datasets.load_digits()
 print(digits.keys())
 print(digits['target_names'])
-print(digits['data'][1])
 for i in range(1, 11):
     plt.subplot(2, 5, i)
     plt.imshow(digits.data[i - 1].reshape([8, 8]), cmap=plt.cm.gray_r)
@@ -76,20 +75,20 @@ def propagate(w, b, X, Y):
     Y - ground truth
     '''
     m = X.shape[1]
-    A = sigmoid(w * m + b)
+    A = sigmoid(np.dot(X, w) + b)
     print(A[0])
-    cost = sum([y * np.log(a) + (1 - y) * np.log(1 - a) for a, y in zip(A, Y)])
+    cost = -1. / m * np.sum(Y * np.log(A) + (1 - Y) * np.log(1 - A))
 
     dw = np.dot(X, (A - Y)) / m
-    db = [(a - y) / len(A) for a, y in zip(A, Y)]
-    print(len(A))
+    db = 1. / m * np.sum((A - Y))
+    # print("-->" + dw.shape)
+    # print("-->" + db.shape)
     assert (dw.shape == w.shape)
     assert (db.dtype == float)
     cost = np.squeeze(cost)
     assert (cost.shape == ())
 
-    grads = {'dw': dw,
-             'db': db}
+    grads = {'dw': dw, 'db': db}
     return grads, cost
 
 
