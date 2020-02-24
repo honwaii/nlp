@@ -10,26 +10,26 @@ from sklearn import datasets
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-digits = datasets.load_digits()
-print(digits.keys())
-print(digits['target_names'])
-for i in range(1, 11):
-    plt.subplot(2, 5, i)
-    plt.imshow(digits.data[i - 1].reshape([8, 8]), cmap=plt.cm.gray_r)
-    plt.text(3, 10, str(digits.target[i - 1]))
-    plt.xticks([])
-    plt.yticks([])
-# plt.show()
 
-X_train, X_test, y_train, y_test = train_test_split(digits.data, digits.target, test_size=0.25)
-y_train[y_train < 5] = 0
-y_train[y_train >= 5] = 1
-y_test[y_test < 5] = 0
-y_test[y_test >= 5] = 1
-print(y_train)
+# for i in range(1, 11):
+#     plt.subplot(2, 5, i)
+#     plt.imshow(digits.data[i - 1].reshape([8, 8]), cmap=plt.cm.gray_r)
+#     plt.text(3, 10, str(digits.target[i - 1]))
+#     plt.xticks([])
+#     plt.yticks([])
+# # plt.show()
 
 
-# print(len(X_train))
+def generate_dataset():
+    digits = datasets.load_digits()
+    X_train, X_test, y_train, y_test = train_test_split(digits.data, digits.target, test_size=0.25)
+    y_train[y_train < 5] = 0
+    y_train[y_train >= 5] = 1
+    y_test[y_test < 5] = 0
+    y_test[y_test >= 5] = 1
+    y_train = y_train.reshape(y_train.shape[0], -1)
+    return X_train, X_test, y_train, y_test
+
 
 def sigmoid(z):
     '''
@@ -52,8 +52,8 @@ def initialize_parameters(dim):
     b -- initializaed scalar
     '''
 
-    w = np.random.random((dim, 1))
-    b = 1.0
+    w = np.zeros(shape=(dim, 1))
+    b = 0
 
     assert (w.shape == (dim, 1))
     assert (isinstance(b, float) or isinstance(b, int))
@@ -74,15 +74,14 @@ def propagate(w, b, X, Y):
     X - data
     Y - ground truth
     '''
-    m = X.shape[1]
+    m = X.shape[0]
     A = sigmoid(np.dot(X, w) + b)
-    print(A[0])
+
     cost = -1. / m * np.sum(Y * np.log(A) + (1 - Y) * np.log(1 - A))
 
-    dw = np.dot(X, (A - Y)) / m
-    db = 1. / m * np.sum((A - Y))
-    # print("-->" + dw.shape)
-    # print("-->" + db.shape)
+    dw = (1.0 / m) * np.dot(X.T, (A - Y))
+    db = (1. / m) * np.sum(A - Y)
+
     assert (dw.shape == w.shape)
     assert (db.dtype == float)
     cost = np.squeeze(cost)
@@ -148,28 +147,16 @@ def predict(w, b, X):
     Returns:
     Y_prediction -- a numpy array (vector) containing all predictions (0/1) for the examples in X
     '''
-    m = X.shape[1]
+    m = X.shape[0]
     Y_prediction = np.zeros((1, m))
-    w = w.reshape(X.shape[0], 1)
 
     A = sigmoid(w * m + b)
-
+    # print(A.shape)
     for i in range(A.shape[0]):
-        if i == 0:
-            continue
-        if i > 5:
-            Y_prediction = True
-        else:
-            Y_prediction = False
-        print(i)
+        Y_prediction[0, i] = 1 if A[i, 0] > 0.5 else 0
     assert (Y_prediction.shape == (1, m))
 
     return Y_prediction
-
-
-learning_rate = 1e-2
-
-iteration_num = 2000
 
 
 def model(X_train, Y_train, X_test, Y_test, num_iterations, learning_rate, print_cost):
@@ -192,19 +179,31 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations, learning_rate, print
              "test_accuracy":test_accuracy,
              "cost":cost}
     """
-    dim = len(X_train[0])
+
+    dim = X_train.shape[1]
+    # print("-->" + str(dim))
     w, b = initialize_parameters(dim)
-    params, grads, costs = optimize(w, b, X_train, Y_train, num_iterations, learning_rate, True)
-    Y_predicte = predict(params['w'], params['b'], X_test)
-    count = 0
+    params, grads, costs = optimize(w, b, X_train, Y_train, num_iterations, learning_rate, print_cost)
+    Y_predicate = predict(params['w'], params['b'], X_test)
 
-    for y, y_hat in (Y_test, Y_predicte):
-        result = y - y_hat
-        if result == 0:
-            continue
-        else:
-            count += 1
-    print("验证的错误率为:" + str(count / len(y)))
+    return Y_predicate, costs
 
 
-model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=200, learning_rate=0.01, print_cost=True)
+def draw_diff_learning_rate():
+    X_train, X_test, y_train, y_test = generate_dataset()
+    y_predicte, costs_1 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+                                learning_rate=0.001,
+                                print_cost=False)
+    y_predicte, costs_2 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+                                learning_rate=0.005,
+                                print_cost=False)
+    y_predicte, costs_3 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+                                learning_rate=0.01,
+                                print_cost=False)
+    plt.plot([x for x in range(len(costs_1))], costs_1, 'c*-')
+    plt.plot([x for x in range(len(costs_2))], costs_2, 'g*-')
+    plt.plot([x for x in range(len(costs_3))], costs_3, 'm*-')
+    plt.show()
+
+
+draw_diff_learning_rate()
