@@ -191,13 +191,13 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations, learning_rate, print
 
 def draw_diff_learning_rate():
     X_train, X_test, y_train, y_test = generate_dataset()
-    y_predicte, costs_1 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+    y_predicte, costs_1 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=2000,
                                 learning_rate=0.001,
                                 print_cost=False)
-    y_predicte, costs_2 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+    y_predicte, costs_2 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=2000,
                                 learning_rate=0.005,
                                 print_cost=False)
-    y_predicte, costs_3 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=20000,
+    y_predicte, costs_3 = model(X_train, Y_train=y_train, X_test=X_test, Y_test=y_test, num_iterations=2000,
                                 learning_rate=0.01,
                                 print_cost=False)
     plt.plot([x for x in range(len(costs_1))], costs_1, 'c*-')
