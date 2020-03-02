@@ -17,3 +17,17 @@ for i in range(1, 11):
     plt.xticks([])
     plt.yticks([])
 plt.show()
+
+
+def load_data():
+    return
+
+
+def classifacation_model():
+    return
+
+
+def trainning():
+    return
+
+# https://blog.csdn.net/zzulp/article/details/76358694
