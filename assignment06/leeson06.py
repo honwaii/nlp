@@ -37,6 +37,7 @@ def gradient():
         loss = w * w
     grad = tape.gradient(loss, w)
     print(grad)
+    return grad
 
 
 def load_dataset():
@@ -95,7 +96,7 @@ def train(x_train, y_train, model):
 
 
 def predict(test, model):
-    result = model.predict(test)
+    result = model.predict(np.asarray(test).reshape(1, 28, 28, 1))
     return result
 
 
@@ -138,13 +139,17 @@ def tf_training(x_train, y_train):
     return mnist_model
 
 
+# Use keras
 (x_train, y_train), (x_test, y_test) = load_dataset()
 model = build_model1()
 trained_model = train(x_train, y_train, model)
 result = predict(x_test[0], trained_model)
 print(result)
 
-# (x_train, y_train), (x_test, y_test) = load_tf_dataset()
-# model = tf_training(x_train, y_train)
-# result = predict(x_test[0], model)
-# print(result)
+# Use TF 2.0
+(x_train, y_train), (x_test, y_test) = load_tf_dataset()
+model = tf_training(x_train, y_train)
+result = predict(x_test[0], model)
+print(y_test[0])
+temp = result[0].tolist()
+print(temp.index(max(temp)))
