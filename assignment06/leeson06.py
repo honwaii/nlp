@@ -7,12 +7,17 @@
 
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-import tensorflow as tf
 import numpy as np
+import tensorflow.compat.v1 as tf
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
-tf.executing_eagerly()
+# tf.executing_eagerly()
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
-
+InteractiveSession.close()
 def basic_operation():
     x = [[2.]]
     m = tf.matmul(x, x)
@@ -50,8 +55,6 @@ def load_dataset():
     x_train = tf.cast(x_train[..., tf.newaxis] / 255, tf.float32),
     x_test = tf.cast(x_test[..., tf.newaxis] / 255, tf.float32),
 
-    # y_train = y_train.astype('float32')
-    # y_test = y_test.astype('float32')
     y_train = tf.keras.utils.to_categorical(y_train, 10)
     y_test = tf.keras.utils.to_categorical(y_test, 10)
     return (x_train, y_train), (x_test, y_test)
@@ -87,7 +90,6 @@ def build_model2():
 
 
 def train(x_train, y_train, model):
-    model = build_model1()
     model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=1e-3),
                   loss=tf.keras.losses.categorical_crossentropy,
                   metrics=['accuracy'])
@@ -149,7 +151,7 @@ def tf_training(x_train, y_train):
 model = build_model1()
 trained_model = train(x_train, y_train, model)
 result = predict1(x_test[0], trained_model)
-print(result)
+# print(result)
 
 # Use TF 2.0
 (x_train, y_train), (x_test, y_test) = load_tf_dataset()
