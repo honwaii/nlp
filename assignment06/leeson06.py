@@ -95,7 +95,12 @@ def train(x_train, y_train, model):
     return model
 
 
-def predict(test, model):
+def predict1(test, model):
+    result = model.predict(test)
+    return result
+
+
+def predict2(test, model):
     result = model.predict(np.asarray(test).reshape(1, 28, 28, 1))
     return result
 
@@ -143,13 +148,13 @@ def tf_training(x_train, y_train):
 (x_train, y_train), (x_test, y_test) = load_dataset()
 model = build_model1()
 trained_model = train(x_train, y_train, model)
-result = predict(x_test[0], trained_model)
+result = predict1(x_test[0], trained_model)
 print(result)
 
 # Use TF 2.0
 (x_train, y_train), (x_test, y_test) = load_tf_dataset()
 model = tf_training(x_train, y_train)
-result = predict(x_test[0], model)
+result = predict2(x_test[0], model)
 print(y_test[0])
 temp = result[0].tolist()
 print(temp.index(max(temp)))
