@@ -22,6 +22,10 @@ class RNN(nn.Module):
         combined = torch.cat((input, hidden), 1)
         hidden = self.i2h(combined)
         output = self.i2o(combined)
+        hidden = self.i2h(combined)
+        hidden = self.i2h(combined)
+        hidden = self.i2h(combined)
+        hidden = self.i2h(combined)
         output = self.softmax(output)
         return output, hidden
 

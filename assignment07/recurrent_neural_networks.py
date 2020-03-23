@@ -52,8 +52,6 @@ def get_languages_and_names() -> (list, dict):
     return all_categories, category_lines
 
 
-# n_categories = len(all_categories)
-
 # Find letter index from all_letters, e.g. "a" = 0
 def letter_to_index(letter):
     return all_letters.find(letter)
@@ -131,20 +129,18 @@ def time_since(since):
     return '%dm %ds' % (m, s)
 
 
-current_loss = 0
-all_losses = []
-
-
-def training():
+def training(all_categories: list, category_lines: dict, rnn: RNN):
     start = time.time()
+    current_loss = 0
+    all_losses = []
     for iter in range(1, n_iters + 1):
-        category, line, category_tensor, line_tensor = sample_training()
-        output, loss = train(category_tensor, line_tensor)
+        category, line, category_tensor, line_tensor = sample_training(all_categories, category_lines)
+        output, loss = train(category_tensor, line_tensor, rnn)
         current_loss += loss
 
         # Print iter number, loss, name and guess
         if iter % print_every == 0:
-            guess, guess_i = category_from_output(output)
+            guess, guess_i = category_from_output(output, all_categories)
             correct = '✓' if guess == category else '✗ (%s)' % category
             print('%d %d%% (%s) %.4f %s / %s %s' % (
                 iter, iter / n_iters * 100, time_since(start), loss, line, guess, correct))
@@ -153,6 +149,7 @@ def training():
         if iter % plot_every == 0:
             all_losses.append(current_loss / plot_every)
             current_loss = 0
+    return all_losses
 
 
 def evaluate(line_tensor, rnn: RNN):
@@ -164,10 +161,10 @@ def evaluate(line_tensor, rnn: RNN):
     return output
 
 
-def predict(input_line, all_categories: list, n_predictions=3):
+def predict(input_line, n_predictions=3):
     print('\n> %s' % input_line)
     with torch.no_grad():
-        output = evaluate(line_to_tensor(input_line))
+        output = evaluate(line_to_tensor(input_line), rnn)
 
         # Get top N categories
         topv, topi = output.topk(n_predictions, 1, True)
@@ -180,13 +177,20 @@ def predict(input_line, all_categories: list, n_predictions=3):
             predictions.append([value, all_categories[category_index]])
 
 
-n_hidden = 128
-# all_categories, category_lines = get_languages_and_names()
-# rnn = RNN(n_letters, n_hidden, len(all_categories))
+def plot_loss(all_losses: list):
+    plt.plot([x for x in range(1, len(all_losses) + 1)], all_losses)
+    plt.show()
 
+
+n_hidden = 128
 n_iters = 1000  # 这个数字你可以调大一些
 print_every = 500
 plot_every = 100
+all_categories, category_lines = get_languages_and_names()
+rnn = RNN(n_letters, n_hidden, len(all_categories))
+
+all_losses = training(all_categories, category_lines, rnn)
+plot_loss(all_losses)
 
 predict('Dovesky')
 predict('Jackson')
