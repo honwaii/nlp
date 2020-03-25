@@ -91,15 +91,11 @@ def sample_training(all_categories: list, category_lines: dict):
     return category, line, category_tensor, line_tensor
 
 
-# for i in range(10):
-#     category, line, category_tensor, line_tensor = sample_training()
-#     print('category =', category, '/ line =', line)
-
-
 learning_rate = 0.005  # If you set this too high, it might explode. If too low, it might not learn
+input_size = n_letters
 
 
-def train(category_tensor, line_tensor, rnn: RNN):
+def train(category_tensor, line_tensor, rnn):
     hidden = rnn.initHidden()
     criterion = nn.CrossEntropyLoss()
 
@@ -107,8 +103,8 @@ def train(category_tensor, line_tensor, rnn: RNN):
     output = None
     for i in range(line_tensor.size()[0]):
         input = line_tensor[i]
-        input = input.view(-1, input.size()[0], input.size()[1])
-        output, hidden = rnn(input, hidden)  # 第i个字母的tensor
+        input = input.view(-1, sequence_length, input_size)
+        output, hidden = rnn(input, line_tensor, hidden)  # 第i个字母的tensor
     # 将所有的输入传入后，最后得到的输出，来比较loss
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -131,10 +127,11 @@ def time_since(since):
     return '%dm %ds' % (m, s)
 
 
-def training(all_categories: list, category_lines: dict, rnn: RNN):
+def training(all_categories: list, category_lines: dict, rnn):
     start = time.time()
     current_loss = 0
     all_losses = []
+
     for iter in range(1, n_iters + 1):
         category, line, category_tensor, line_tensor = sample_training(all_categories, category_lines)
         output, loss = train(category_tensor, line_tensor, rnn)
@@ -184,11 +181,16 @@ def plot_loss(all_losses: list):
     return
 
 
+def max_name_length(category_lines: dict):
+    return len(max(category_lines, key=len))
+
+
 n_hidden = 128
 n_iters = 100000  # 这个数字你可以调大一些
 print_every = 5000
 plot_every = 1000
 all_categories, category_lines = get_languages_and_names()
+sequence_length = max_name_length(category_lines)
 
 
 def diff_hidden_layers():
@@ -209,7 +211,6 @@ def diff_model():
     rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
     all_losses_1 = training(all_categories, category_lines, rnn_lstm)
     plot_loss(all_losses_1)
-
 
 diff_model()
 
