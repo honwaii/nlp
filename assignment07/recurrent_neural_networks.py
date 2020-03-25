@@ -14,7 +14,7 @@ import string
 import torch
 import time
 import math
-from assignment07.rnn import RNN
+from assignment07.rnn import RNN, LSTM
 import torch.nn as nn
 
 
@@ -106,7 +106,9 @@ def train(category_tensor, line_tensor, rnn: RNN):
     rnn.zero_grad()
     output = None
     for i in range(line_tensor.size()[0]):
-        output, hidden = rnn(line_tensor[i], hidden)  # 第i个字母的tensor
+        input = line_tensor[i]
+        input = input.view(-1, input.size()[0], input.size()[1])
+        output, hidden = rnn(input, hidden)  # 第i个字母的tensor
     # 将所有的输入传入后，最后得到的输出，来比较loss
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -179,22 +181,43 @@ def predict(input_line, n_predictions=3):
 
 def plot_loss(all_losses: list):
     plt.plot([x for x in range(1, len(all_losses) + 1)], all_losses)
-    plt.show()
+    return
 
 
 n_hidden = 128
-n_iters = 1000  # 这个数字你可以调大一些
-print_every = 500
-plot_every = 100
+n_iters = 100000  # 这个数字你可以调大一些
+print_every = 5000
+plot_every = 1000
 all_categories, category_lines = get_languages_and_names()
-rnn = RNN(n_letters, n_hidden, len(all_categories))
 
-all_losses = training(all_categories, category_lines, rnn)
-plot_loss(all_losses)
 
-predict('Dovesky')
-predict('Jackson')
-predict('Satoshi')
+def diff_hidden_layers():
+    rnn_1 = RNN(n_letters, n_hidden, len(all_categories), 1)
+    all_losses_1 = training(all_categories, category_lines, rnn_1)
+    plt.plot([x for x in range(1, len(all_losses_1) + 1)], all_losses_1, color='r')
+    # rnn_2 = RNN(n_letters, n_hidden, len(all_categories), 2)
+    # all_losses_2 = training(all_categories, category_lines, rnn_2)
+    # plt.plot([x for x in range(1, len(all_losses_2) + 1)], all_losses_2, color='g')
+    # rnn_3 = RNN(n_letters, n_hidden, len(all_categories), 3)
+    # all_losses_3 = training(all_categories, category_lines, rnn_3)
+    # plt.plot([x for x in range(1, len(all_losses_3) + 1)], all_losses_3, color='b')
+    plt.show()
+    return
+
+
+def diff_model():
+    rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
+    all_losses_1 = training(all_categories, category_lines, rnn_lstm)
+    plot_loss(all_losses_1)
+
+
+diff_model()
+
+# diff_hidden_layers()
+
+# predict('Dovesky')
+# predict('Jackson')
+# predict('Satoshi')
 
 # 代码练习
 # 1. 尝试在我们的RNN模型中添加更多layers，然后观察Loss变化
