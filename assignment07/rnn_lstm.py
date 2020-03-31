@@ -14,12 +14,64 @@ from torch import nn
 from assignment07.rnn import LSTM
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
+import numpy as np
 
 input_size = 57
 hidden_size = 128
 num_layers = 1
 num_classes = 18
 batch_size = 200
+
+
+class CustomDataset():
+    '''Creates a custom dataset from numpy arrays of features and labels
+    for feeding into PyTorch dataloaders '''
+
+    def __init__(self, features, labels):
+        self.features = torch.from_numpy(features)
+        self.labels = torch.from_numpy(labels).type(torch.LongTensor)
+        self.len = len(features)
+
+    def __getitem__(self, index):
+        return self.features[index], self.labels[index]
+
+    def __len__(self):
+        return self.len
+
+
+# Function to convert each line = each name into a one-hot tensor
+
+def letter_to_index(letter):
+    return all_letters.find(letter)
+
+
+def line_to_tensor(line):
+    tensor = torch.zeros(len(line), 1, n_letters)
+    for i, letter in enumerate(line):
+        tensor[i][0][letter_to_index(letter)] = 1
+    return tensor
+
+
+line_list_clean = [unicode_to_ascii(line) for line in line_list]
+line_list_tensorized = [line_to_tensor(line) for line in line_list_clean]
+# Pad sequences - automatically converts the data to a tensor
+line_tensor = pad_sequence(line_list_tensorized)
+
+# Transpose tensor to the correct format: Number of observations, 1, sequence length, features
+line_tensor_permuted = line_tensor.permute(1, 2, 0, 3)
+# Convert feature tensor to array
+X = line_tensor_permuted.numpy()
+
+# Map languages to integer labels
+category_dict = dict(zip(all_categories, range(n_categories)))
+
+# Convert all languages in the category list to an array of labels
+category_list_numeric = [category_dict.get(i) for i in category_list]
+y = np.array(category_list_numeric)
+
+data_train = CustomDataset(features=X, labels=y)
+data_test = CustomDataset(features=X, labels=y)
+
 trainloader = DataLoader(dataset=data_train, batch_size=batch_size, shuffle=True)
 
 model = LSTM(input_size, hidden_size, num_layers, num_classes)

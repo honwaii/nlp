@@ -16,6 +16,7 @@ import time
 import math
 from assignment07.rnn import RNN, LSTM
 import torch.nn as nn
+from torch.nn.utils.rnn import pad_sequence
 
 
 def find_files(path): return glob.glob(path)
@@ -85,9 +86,10 @@ def sample(l):
 
 def sample_training(all_categories: list, category_lines: dict):
     category = sample(all_categories)  # all_categories:所有的国家名 ，category: 某个国家名
-    line = sample(category_lines[category])  # line : 某个国家的名字
+    line = sample(category_lines[category])  # line : 某个国家的人的名字
     category_tensor = torch.tensor([all_categories.index(category)], dtype=torch.long)
     line_tensor = line_to_tensor(line)
+    line_tensor = pad_sequence(line_tensor)
     return category, line, category_tensor, line_tensor
 
 
@@ -96,15 +98,18 @@ input_size = n_letters
 
 
 def train(category_tensor, line_tensor, rnn):
-    hidden = rnn.initHidden()
+    # hidden = rnn.initHidden()
     criterion = nn.CrossEntropyLoss()
 
     rnn.zero_grad()
     output = None
     for i in range(line_tensor.size()[0]):
         input = line_tensor[i]
-        input = input.view(-1, sequence_length, input_size)
-        output, hidden = rnn(input, line_tensor, hidden)  # 第i个字母的tensor
+        # print(input.shape)
+        # input = input.reshape(-1, sequence_length, input_size)
+        ## 1.  original  RNN
+        # output, hidden = rnn(input, line_tensor, hidden)  # 第i个字母的tensor
+        output, hidden = rnn(input)  # 第i个字母的tensor
     # 将所有的输入传入后，最后得到的输出，来比较loss
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -131,10 +136,17 @@ def training(all_categories: list, category_lines: dict, rnn):
     start = time.time()
     current_loss = 0
     all_losses = []
+    criterion = nn.CrossEntropyLoss()
 
+    rnn.zero_grad()
+    output = None
     for iter in range(1, n_iters + 1):
         category, line, category_tensor, line_tensor = sample_training(all_categories, category_lines)
-        output, loss = train(category_tensor, line_tensor, rnn)
+        # output, loss = train(category_tensor, line_tensor, rnn)
+        print(line_tensor.shape)
+        output = rnn(line_tensor)
+        print(output.shape)
+        loss = criterion(output, category_tensor)
         current_loss += loss
 
         # Print iter number, loss, name and guess
@@ -207,10 +219,15 @@ def diff_hidden_layers():
     return
 
 
+def handle_data():
+    return
+
+
 def diff_model():
     rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
     all_losses_1 = training(all_categories, category_lines, rnn_lstm)
     plot_loss(all_losses_1)
+
 
 diff_model()
 

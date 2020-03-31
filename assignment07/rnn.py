@@ -37,7 +37,6 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-
         self.num_layers = num_layers
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)  # LSTM
         self.fc = nn.Linear(hidden_size, output_size)
@@ -51,6 +50,3 @@ class LSTM(nn.Module):
         out = self.fc(out[:, -1, :])
         out = self.softmax(out)
         return out
-
-    def initHidden(self):
-        return torch.zeros(1, self.hidden_size)
