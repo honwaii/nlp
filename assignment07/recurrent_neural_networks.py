@@ -194,8 +194,8 @@ def predict(input_line, n_predictions=3):
             predictions.append([value, all_categories[category_index]])
 
 
-def plot_loss(all_losses: list):
-    plt.plot([x for x in range(1, len(all_losses) + 1)], all_losses)
+def plot_loss(all_losses: list, color):
+    plt.plot([x for x in range(1, len(all_losses) + 1)], all_losses, color=color)
     return
 
 
@@ -212,15 +212,9 @@ sequence_length = max_name_length(category_lines)
 
 
 def diff_hidden_layers():
-    rnn_1 = Multi_Layers_RNN(n_letters, n_hidden, len(all_categories), 1)
-    all_losses_1 = training(all_categories, category_lines, rnn_1)
+    rnn_multi_layers = Multi_Layers_RNN(n_letters, n_hidden, len(all_categories), 1)
+    all_losses_1 = training(all_categories, category_lines, rnn_multi_layers)
     plt.plot([x for x in range(1, len(all_losses_1) + 1)], all_losses_1, color='r')
-    # rnn_2 = RNN(n_letters, n_hidden, len(all_categories), 2)
-    # all_losses_2 = training(all_categories, category_lines, rnn_2)
-    # plt.plot([x for x in range(1, len(all_losses_2) + 1)], all_losses_2, color='g')
-    # rnn_3 = RNN(n_letters, n_hidden, len(all_categories), 3)
-    # all_losses_3 = training(all_categories, category_lines, rnn_3)
-    # plt.plot([x for x in range(1, len(all_losses_3) + 1)], all_losses_3, color='b')
     plt.show()
     return
 
@@ -230,10 +224,19 @@ def handle_data():
 
 
 def diff_model():
-    # rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
-    gru = GRU(n_letters, n_hidden, 1, len(all_categories))
-    all_losses_1 = training(all_categories, category_lines, gru)
-    plot_loss(all_losses_1)
+    # rnn_multi_layers = Multi_Layers_RNN(n_letters, n_hidden, len(all_categories), 1)
+    rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
+    color = ['r', 'g', 'b']
+    gru_1 = LSTM(n_letters, n_hidden, 1, len(all_categories))
+    gru_2 = LSTM(n_letters, n_hidden, 2, len(all_categories))
+    gru_3 = LSTM(n_letters, n_hidden, 3, len(all_categories))
+    all_losses_1 = training(all_categories, category_lines, gru_1)
+    all_losses_2 = training(all_categories, category_lines, gru_2)
+    all_losses_3 = training(all_categories, category_lines, gru_3)
+    plot_loss(all_losses_1, color[0])
+    plot_loss(all_losses_2, color[1])
+    plot_loss(all_losses_3, color[2])
+    plt.show()
 
 
 diff_model()
