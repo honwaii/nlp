@@ -14,7 +14,7 @@ import string
 import torch
 import time
 import math
-from assignment07.rnn import RNN, LSTM
+from assignment07.rnn import LSTM, Multi_Layers_RNN, GRU
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 
@@ -97,19 +97,13 @@ learning_rate = 0.005  # If you set this too high, it might explode. If too low,
 input_size = n_letters
 
 
-def train(category_tensor, line_tensor, rnn):
-    # hidden = rnn.initHidden()
-    criterion = nn.CrossEntropyLoss()
+def multi_layers_train(category_tensor, line_tensor, rnn: Multi_Layers_RNN, criterion):
+    hidden = rnn.initHidden()
 
     rnn.zero_grad()
     output = None
     for i in range(line_tensor.size()[0]):
-        input = line_tensor[i]
-        # print(input.shape)
-        # input = input.reshape(-1, sequence_length, input_size)
-        ## 1.  original  RNN
-        # output, hidden = rnn(input, line_tensor, hidden)  # 第i个字母的tensor
-        output, hidden = rnn(input)  # 第i个字母的tensor
+        output, hidden = rnn(line_tensor[i], hidden)  # 第i个字母的tensor
     # 将所有的输入传入后，最后得到的输出，来比较loss
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -123,7 +117,6 @@ def train(category_tensor, line_tensor, rnn):
 
 # Keep track of losses for plotting
 
-
 def time_since(since):
     now = time.time()
     s = now - since
@@ -136,17 +129,15 @@ def training(all_categories: list, category_lines: dict, rnn):
     start = time.time()
     current_loss = 0
     all_losses = []
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
 
-    rnn.zero_grad()
-    output = None
+    optimizer = torch.optim.Adam(rnn.parameters(), lr=learning_rate)
+
     for iter in range(1, n_iters + 1):
         category, line, category_tensor, line_tensor = sample_training(all_categories, category_lines)
-        # output, loss = train(category_tensor, line_tensor, rnn)
-        print(line_tensor.shape)
-        output = rnn(line_tensor)
-        print(output.shape)
-        loss = criterion(output, category_tensor)
+        # output, loss = multi_layers_train(category_tensor, line_tensor, rnn, criterion)
+        output, loss = lstm_train(category_tensor, line_tensor, rnn, criterion, optimizer)
         current_loss += loss
 
         # Print iter number, loss, name and guess
@@ -160,53 +151,25 @@ def training(all_categories: list, category_lines: dict, rnn):
         if iter % plot_every == 0:
             all_losses.append(current_loss / plot_every)
             current_loss = 0
-        loss.backward()
-
-    # Add parameters' gradients to their values, multiplied by learning rate
-    for p in rnn.parameters():
-        p.data.add_(-learning_rate, p.grad.data)
 
     return all_losses
 
 
-def lstm_train(rnntr55555):
-    start = time.time()
+def lstm_train(category_tensor, line_tensor, rnn: LSTM, criterion, optimizer):
+    output = rnn(line_tensor)
+    loss = criterion(output, category_tensor)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-    current_loss = 0
-    all_losses = []
-    criterion = nn.CrossEntropyLoss()
+    # Add parameters' gradients to their values, multiplied by learning rate
+    # for p in rnn.parameters():
+    #     p.data.add_(-learning_rate, p.grad.data)
 
-    rnn.zero_grad()
-    output = None
-    for iter in range(1, n_iters + 1):
-        category, line, category_tensor, line_tensor = sample_training(all_categories, category_lines)
-        # output, loss = train(category_tensor, line_tensor, rnn)
-        print(line_tensor.shape)
-        output = rnn(line_tensor)
-        print(output.shape)
-        loss = criterion(output, category_tensor)
-        current_loss += loss
-
-        # Print iter number, loss, name and guess
-        if iter % print_every == 0:
-            guess, guess_i = category_from_output(output, all_categories)
-            correct = '✓' if guess == category else '✗ (%s)' % category
-            print('%d %d%% (%s) %.4f %s / %s %s' % (
-                iter, iter / n_iters * 100, time_since(start), loss, line, guess, correct))
-
-        # Add current loss avg to list of losses
-        if iter % plot_every == 0:
-            all_losses.append(current_loss / plot_every)
-            current_loss = 0
-        loss.backward()
-
-        # Add parameters' gradients to their values, multiplied by learning rate
-    for p in rnn.parameters():
-        p.data.add_(-learning_rate, p.grad.data)
-    return
+    return output, loss.item()
 
 
-def evaluate(line_tensor, rnn: RNN):
+def evaluate(line_tensor, rnn: Multi_Layers_RNN):
     hidden = rnn.initHidden()
     output = None
     for i in range(line_tensor.size()[0]):
@@ -241,15 +204,15 @@ def max_name_length(category_lines: dict):
 
 
 n_hidden = 128
-n_iters = 100000  # 这个数字你可以调大一些
-print_every = 5000
+n_iters = 10000  # 这个数字你可以调大一些
+print_every = 1000
 plot_every = 1000
 all_categories, category_lines = get_languages_and_names()
 sequence_length = max_name_length(category_lines)
 
 
 def diff_hidden_layers():
-    rnn_1 = RNN(n_letters, n_hidden, len(all_categories), 1)
+    rnn_1 = Multi_Layers_RNN(n_letters, n_hidden, len(all_categories), 1)
     all_losses_1 = training(all_categories, category_lines, rnn_1)
     plt.plot([x for x in range(1, len(all_losses_1) + 1)], all_losses_1, color='r')
     # rnn_2 = RNN(n_letters, n_hidden, len(all_categories), 2)
@@ -267,8 +230,9 @@ def handle_data():
 
 
 def diff_model():
-    rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
-    all_losses_1 = training(all_categories, category_lines, rnn_lstm)
+    # rnn_lstm = LSTM(n_letters, n_hidden, 1, len(all_categories))
+    gru = GRU(n_letters, n_hidden, 1, len(all_categories))
+    all_losses_1 = training(all_categories, category_lines, gru)
     plot_loss(all_losses_1)
 
 
