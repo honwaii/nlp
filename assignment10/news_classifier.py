@@ -4,7 +4,7 @@
 # @Author  : honwaii
 # @Email   : honwaii@126.com
 # @File    : news_classifier.py
-
+import gensim
 import pandas as pd
 import jieba
 import numpy as  np
@@ -22,12 +22,10 @@ class News:
 def handle_news():
     essays_path = './news_data.csv'
     contents = pd.read_csv(essays_path, encoding='gb18030', usecols=["source", "content"])
-    stop_words_1 = open(u'哈工大停用词表.txt', "r", encoding="utf-8").readlines()
-    stop_words_2 = open(u'中文停用词表.txt', "r", encoding="utf-8").readlines()
-    stop_words = stop_words_1 + stop_words_2
+    stop_words = open(u'stopwords.txt', "r", encoding="utf-8").readlines()
     stop_words_list = [line.strip() for line in stop_words]
-    news_xinhua = []
-    news_other = []
+    news = []
+    labels = []
     count = 0
     for each in contents.iterrows():
         content = str(each[1]['content']).strip()
@@ -42,22 +40,24 @@ def handle_news():
         content = content.replace("\t", "。").strip()
         content1 = content.replace("新华社", "").strip()
         content = split_content(content1, stop_words_list) + "\n"
+        news.append(content)
         if '新华社' in source:
-            news_xinhua.append(content)
+            labels.append('1')
         else:
-            news_other.append(content)
+            labels.append('0')
         count += 1
         if count % 1000 == 0:
-            print('others:' + str(len(news_other)))
-            print('新华社:' + str(len(news_xinhua)))
-    with open("./新华社新闻.txt", 'w', encoding='utf-8') as f:
-        f.writelines(news_xinhua)
+            print('handle docs: ' + str(count))
+
+    with open("./news.txt", 'w', encoding='utf-8') as f:
+        f.writelines(news)
         f.flush()
         f.close()
-    with open("./other_news.txt", 'w', encoding='utf-8') as f:
-        f.writelines(news_other)
+    with open("./labels.txt", 'w', encoding='utf-8') as f:
+        f.writelines(labels)
         f.flush()
         f.close()
+
     # print("获取到的文章数:" + str(len(essays)))
     # print("新华社的文章数:" + str(count))
     return
@@ -140,7 +140,8 @@ def sentence_to_vec(sentence_list: list, word_vec: Word2Vec, look_table: dict, a
 def load_word_vector_model(path: str):
     print("加载的词向量的路径: " + path)
     # 加载glove转换的模型: 保存的为文本形式
-    word_embedding = KeyedVectors.load_word2vec_format(path)
+    # word_embedding = KeyedVectors.load_word2vec_format
+    word_embedding = gensim.models.Word2Vec.load(path)
     return word_embedding
 
 
@@ -157,8 +158,8 @@ def get_max_length_doc(path: str):
     return max_length
 
 
-def generate_sentence_vector(content: str, word_vec_model: Word2Vec):
-    words = content.strip(" ")
+def generate_doc_vector(doc: str, word_vec_model: Word2Vec):
+    words = doc.strip(" ")
     word_vec = np.zeros(word_vec_model.vector_size)
     for word in words:
         word_vec += get_word_vector(word, word_vec_model)
@@ -166,18 +167,45 @@ def generate_sentence_vector(content: str, word_vec_model: Word2Vec):
     return word_vec
 
 
-def load_docs(path: str):
-    with open(path, 'r', encoding='utf-8') as f:
+def compute_docs_vec(docs: list, model):
+    return np.row_stack([generate_doc_vector(doc, model) for doc in docs])
+
+
+def load_docs_labels():
+    with open('./news.txt', 'r', encoding='utf-8') as f:
         lines = f.readlines()
-        docs = str(lines).split("\\n")
-    return docs
+        docs = [str(line) for line in lines]
+    with open('./labels.txt', 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        labels_str = str(lines[0]).strip()
+        labels = [int(label) for label in labels_str]
+
+    model = load_word_vector_model('./word_embedding_model_100')
+
+    docs_vec = compute_docs_vec(docs, model)
+    return docs_vec, labels
 
 
-# model = load_word_vector_model('./sgns.wiki.model')
-# print('加载完成。')
-# docs = load_docs('./other_news.txt')
-# for i in range(1, 10):
-#     vec = generate_sentence_vector(docs[i], model)
-#     print(vec)
+# handle_news()
+# # TODO 数据集 划分训练集和测试集 数据贴标签
+from sklearn.model_selection import train_test_split
 
-# TODO 数据集 划分训练集和测试集 数据贴标签
+#
+# # 根据y分层抽样，测试数据占20%
+x, y = load_docs_labels()
+print('-----')
+from sklearn.preprocessing import LabelEncoder
+
+y_encoder = LabelEncoder()
+y = y_encoder.fit_transform(y)
+train_idx, test_idx = train_test_split(range(len(y)), test_size=0.2, stratify=y)
+train_x = x[train_idx, :]
+train_y = y[train_idx]
+test_x = x[test_idx, :]
+test_y = y[test_idx]
+
+from sklearn.linear_model import LogisticRegression
+
+print('++++++')
+model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
+model.fit(train_x, train_y)
