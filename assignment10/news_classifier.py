@@ -5,19 +5,19 @@
 # @Email   : honwaii@126.com
 # @File    : news_classifier.py
 import os
-from functools import reduce
 import pickle
+from functools import reduce
+
 import gensim
-import pandas as pd
 import jieba
 import numpy as  np
-from sklearn.decomposition import PCA
+import pandas as pd
 from gensim.models import KeyedVectors
 from gensim.models.word2vec import Word2Vec
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
-from sklearn.naive_bayes import MultinomialNB, GaussianNB
+from sklearn.naive_bayes import GaussianNB
 
 
 def handle_news(stop_words_list: list):
@@ -132,22 +132,23 @@ def load_docs_labels(model):
 
 # # 根据y分层抽样，测试数据占20%
 
-def train_model():
+def train_model(model=None, name=None):
     x, y = load_docs_labels(word_vec_model)
-    print(x.shape)
     train_idx, test_idx = train_test_split(range(len(y)), test_size=0.2, stratify=y)
     train_x = x[train_idx, :]
     train_y = y[train_idx]
     test_x = x[test_idx, :]
     test_y = y[test_idx]
-    model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
-    # model = GaussianNB()
+    if model is None:
+        model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+        name = 'LogisticRegression'
     model.fit(train_x, train_y)
+    print("model: " + name)
     print("Training set score: {:.3f}".format(model.score(train_x, train_y)))
     print("Test set score: {:.3f}".format(model.score(test_x, test_y)))
     y_pred = model.predict(test_x)
-    t = eval_model(test_y, y_pred, np.asarray([0, 1]))
-    print(t)
+    eval = eval_model(test_y, y_pred, np.asarray([0, 1]))
+    print(eval)
     return model
 
 
@@ -155,7 +156,10 @@ def predict(doc, model):
     doc_vec = generate_doc_vector(doc, word_vec_model)
     doc_vec = np.asarray(doc_vec).reshape(1, -1)
     y = model['lr'].predict(doc_vec)
-    return y
+    if y[0] == 0:
+        return '该新闻由非新华社发布'
+    else:
+        return '该新闻由新华社发布'
 
 
 # 计算各项评价指标
@@ -202,18 +206,29 @@ def load_model(path):
     return lr_model
 
 
+def compare_model():
+    model_1 = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+    train_model(model_1, name='LogisticRegression')
+    print('--------------------------------------')
+    model_2 = GaussianNB()
+    train_model(model_2, name='GaussianNB')
+    return
+
+
 stop_words = open(u'stopwords.txt', "r", encoding="utf-8").readlines()
 stop_words_list = [line.strip() for line in stop_words]
 # # handle_news(stop_words_list)
 # word_vec_model = load_word_vector_model('./sgns.wiki.model', False)
 word_vec_model = load_word_vector_model(path='./word_embedding_model_100', self_trained=True)
-model = train_model()
+# compare_model()
+# model = train_model()
 # save_model(model, './')
 with open('./news_demo.txt', 'r', encoding='utf-8') as f:
     lines = f.readlines()
     doc = reduce(lambda x, y: x + y, lines)
+    print("预测的文章:" + doc)
     doc = handle_doc(doc, stop_words_list)
     f.close()
 model = load_model('./')
 result = predict(doc, model)
-print(result)
+print('预测结果:\n' + result)
