@@ -20,12 +20,6 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from sklearn.naive_bayes import MultinomialNB, GaussianNB
 
 
-class News:
-    def __init__(self, content: str, label: int):
-        self.content = content
-        self.label = label
-
-
 def handle_news(stop_words_list: list):
     essays_path = './news_data.csv'
     contents = pd.read_csv(essays_path, encoding='gb18030', usecols=["source", "content"])
@@ -87,64 +81,12 @@ def handle_doc(doc: str, stop_words_list: list):
     return content
 
 
-def get_words_frequency_dict(path: str):
-    print("load word frequency file from " + path)
-    word2weight = {}
-    with open(path, encoding='utf-8') as f:
-        lines = f.readlines()
-    for line in lines:
-        line = line.strip()
-        if len(line) <= 0:
-            continue
-        line = line.split()
-        if len(line) == 2:
-            word2weight[line[0]] = float(line[1])
-        else:
-            print(line)
-    return word2weight
-
-
-def get_word_frequency(word_text, look_table):
-    if word_text in look_table:
-        return look_table[word_text]
-    else:
-        return 1.0
-
-
 def get_word_vector(word: str, word_vector_model: Word2Vec):
     try:
         word_vector = word_vector_model[word]
     except KeyError:
         word_vector = np.zeros(word_vector_model.vector_size)
     return word_vector
-
-
-def sentence_to_vec(sentence_list: list, word_vec: Word2Vec, look_table: dict, a=1e-3):
-    sentence_set = []
-    for sentence in sentence_list:
-        vs = np.zeros(word_vec.vector_size)  # add all word2vec values into one vector for the sentence
-        sentence_length = sentence.len()
-        for word in sentence.word_list:
-            a_value = a / (a + get_word_frequency(word, look_table))  # smooth inverse frequency, SIF
-            vs = np.add(vs, np.multiply(a_value, get_word_vector(word, word_vec)))  # vs += sif * word_vector
-        vs = np.divide(vs, sentence_length)  # weighted average
-        sentence_set.append(vs)  # add to our existing re-calculated set of sentences
-    if len(sentence_list) < 2:
-        return sentence_set
-    pca = PCA()
-    pca.fit(np.array(sentence_set))
-    u = pca.components_[0]  # the PCA vector
-    u = np.multiply(u, np.transpose(u))  # u x uT
-
-    if len(u) < word_vec.vector_size:
-        for i in range(word_vec.vector_size - len(u)):
-            u = np.append(u, 0)  # add needed extension for multiplication below
-
-    sentence_vecs = []
-    for vs in sentence_set:
-        sub = np.multiply(u, vs)
-        sentence_vecs.append(np.subtract(vs, sub))
-    return sentence_vecs
 
 
 def load_word_vector_model(path: str, self_trained: bool):
@@ -156,19 +98,6 @@ def load_word_vector_model(path: str, self_trained: bool):
         word_embedding = KeyedVectors.load_word2vec_format(path)
     print('load finished.')
     return word_embedding
-
-
-def get_max_length_doc(path: str):
-    with open(path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-        docs = str(lines).split("\\n")
-        max_length = 0
-        print(len(docs))
-        for doc in docs:
-            content = doc.split(" ")
-            if len(content) > max_length:
-                max_length = len(content)
-    return max_length
 
 
 def generate_doc_vector(doc: str, word_vec_model: Word2Vec):
@@ -217,7 +146,7 @@ def train_model():
     print("Training set score: {:.3f}".format(model.score(train_x, train_y)))
     print("Test set score: {:.3f}".format(model.score(test_x, test_y)))
     y_pred = model.predict(test_x)
-    t=eval_model(test_y, y_pred, np.asarray([0, 1]))
+    t = eval_model(test_y, y_pred, np.asarray([0, 1]))
     print(t)
     return model
 
