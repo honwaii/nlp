@@ -171,7 +171,7 @@ def compute_docs_vec(docs: list, model):
     return np.row_stack([generate_doc_vector(doc, model) for doc in docs])
 
 
-def load_docs_labels():
+def load_docs_labels(model):
     with open('./news.txt', 'r', encoding='utf-8') as f:
         lines = f.readlines()
         docs = [str(line) for line in lines]
@@ -180,32 +180,33 @@ def load_docs_labels():
         labels_str = str(lines[0]).strip()
         labels = [int(label) for label in labels_str]
 
-    model = load_word_vector_model('./word_embedding_model_100')
-
     docs_vec = compute_docs_vec(docs, model)
+    labels = np.asarray(labels)
     return docs_vec, labels
 
 
-# handle_news()
 # # TODO 数据集 划分训练集和测试集 数据贴标签
-from sklearn.model_selection import train_test_split
 
-#
+
 # # 根据y分层抽样，测试数据占20%
-x, y = load_docs_labels()
-print('-----')
-from sklearn.preprocessing import LabelEncoder
 
-y_encoder = LabelEncoder()
-y = y_encoder.fit_transform(y)
-train_idx, test_idx = train_test_split(range(len(y)), test_size=0.2, stratify=y)
-train_x = x[train_idx, :]
-train_y = y[train_idx]
-test_x = x[test_idx, :]
-test_y = y[test_idx]
+def train_model():
+    x, y = load_docs_labels(word_vec_model)
+    train_idx, test_idx = train_test_split(range(len(y)), test_size=0.2, stratify=y)
+    train_x = x[train_idx, :]
+    train_y = y[train_idx]
+    test_x = x[test_idx, :]
+    test_y = y[test_idx]
+    model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
+    model.fit(train_x, train_y)
+    return model
 
-from sklearn.linear_model import LogisticRegression
 
-print('++++++')
-model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
-model.fit(train_x, train_y)
+def predict(doc: str):
+    doc_vec = generate_doc_vector(doc, word_vec_model)
+    result = model.predict(doc_vec)
+    return result
+
+
+word_vec_model = load_word_vector_model('./word_embedding_model_100')
+# handle_news()
