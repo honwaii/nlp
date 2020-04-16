@@ -211,11 +211,14 @@ def train_model():
     train_y = y[train_idx]
     test_x = x[test_idx, :]
     test_y = y[test_idx]
-    # model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
-    model = GaussianNB()
+    model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+    # model = GaussianNB()
     model.fit(train_x, train_y)
     print("Training set score: {:.3f}".format(model.score(train_x, train_y)))
     print("Test set score: {:.3f}".format(model.score(test_x, test_y)))
+    y_pred = model.predict(test_x)
+    t=eval_model(test_y, y_pred, np.asarray([0, 1]))
+    print(t)
     return model
 
 
@@ -275,7 +278,7 @@ stop_words_list = [line.strip() for line in stop_words]
 # # handle_news(stop_words_list)
 # word_vec_model = load_word_vector_model('./sgns.wiki.model', False)
 word_vec_model = load_word_vector_model(path='./word_embedding_model_100', self_trained=True)
-# model = train_model()
+model = train_model()
 # save_model(model, './')
 with open('./news_demo.txt', 'r', encoding='utf-8') as f:
     lines = f.readlines()
