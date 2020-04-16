@@ -17,6 +17,7 @@ from gensim.models.word2vec import Word2Vec
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+from sklearn.naive_bayes import MultinomialNB, GaussianNB
 
 
 class News:
@@ -146,11 +147,13 @@ def sentence_to_vec(sentence_list: list, word_vec: Word2Vec, look_table: dict, a
     return sentence_vecs
 
 
-def load_word_vector_model(path: str):
+def load_word_vector_model(path: str, self_trained: bool):
     print("加载的词向量的路径: " + path)
     # 加载glove转换的模型: 保存的为文本形式
-    word_embedding = KeyedVectors.load_word2vec_format(path)
-    # word_embedding = gensim.models.Word2Vec.load(path)
+    if self_trained:
+        word_embedding = gensim.models.Word2Vec.load(path)
+    else:
+        word_embedding = KeyedVectors.load_word2vec_format(path)
     print('load finished.')
     return word_embedding
 
@@ -208,7 +211,8 @@ def train_model():
     train_y = y[train_idx]
     test_x = x[test_idx, :]
     test_y = y[test_idx]
-    model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+    # model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
+    model = GaussianNB()
     model.fit(train_x, train_y)
     print("Training set score: {:.3f}".format(model.score(train_x, train_y)))
     print("Test set score: {:.3f}".format(model.score(test_x, test_y)))
@@ -269,9 +273,10 @@ def load_model(path):
 stop_words = open(u'stopwords.txt', "r", encoding="utf-8").readlines()
 stop_words_list = [line.strip() for line in stop_words]
 # # handle_news(stop_words_list)
-word_vec_model = load_word_vector_model('./sgns.wiki.model')
-model = train_model()
-save_model(model, './')
+# word_vec_model = load_word_vector_model('./sgns.wiki.model', False)
+word_vec_model = load_word_vector_model(path='./word_embedding_model_100', self_trained=True)
+# model = train_model()
+# save_model(model, './')
 with open('./news_demo.txt', 'r', encoding='utf-8') as f:
     lines = f.readlines()
     doc = reduce(lambda x, y: x + y, lines)
