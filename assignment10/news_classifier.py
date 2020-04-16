@@ -4,6 +4,9 @@
 # @Author  : honwaii
 # @Email   : honwaii@126.com
 # @File    : news_classifier.py
+import os
+from functools import reduce
+import pickle
 import gensim
 import pandas as pd
 import jieba
@@ -11,6 +14,9 @@ import numpy as  np
 from sklearn.decomposition import PCA
 from gensim.models import KeyedVectors
 from gensim.models.word2vec import Word2Vec
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
 
 class News:
@@ -19,11 +25,9 @@ class News:
         self.label = label
 
 
-def handle_news():
+def handle_news(stop_words_list: list):
     essays_path = './news_data.csv'
     contents = pd.read_csv(essays_path, encoding='gb18030', usecols=["source", "content"])
-    stop_words = open(u'stopwords.txt', "r", encoding="utf-8").readlines()
-    stop_words_list = [line.strip() for line in stop_words]
     news = []
     labels = []
     count = 0
@@ -34,19 +38,14 @@ def handle_news():
             continue
         if content is None or not isinstance(content, str):
             continue
-        content = content.replace("\n", "。").strip()
-        content = content.replace(r"\n", "。").strip()
-        content = content.replace("\r", "。").strip()
-        content = content.replace("\t", "。").strip()
-        content1 = content.replace("新华社", "").strip()
-        content = split_content(content1, stop_words_list) + "\n"
+        content = handle_doc(content, stop_words_list)
         news.append(content)
         if '新华社' in source:
             labels.append('1')
         else:
             labels.append('0')
         count += 1
-        if count % 1000 == 0:
+        if count % 2000 == 0:
             print('handle docs: ' + str(count))
 
     with open("./news.txt", 'w', encoding='utf-8') as f:
@@ -75,6 +74,16 @@ def split_content(content: str, stop_words: list):
             continue
         simpled += seg + " "
     return simpled
+
+
+def handle_doc(doc: str, stop_words_list: list):
+    doc = doc.replace("\n", "。").strip()
+    doc = doc.replace(r"\n", "。").strip()
+    doc = doc.replace("\r", "。").strip()
+    doc = doc.replace("\t", "。").strip()
+    doc = doc.replace("新华社", "").strip()
+    content = split_content(doc, stop_words_list) + "\n"
+    return content
 
 
 def get_words_frequency_dict(path: str):
@@ -140,8 +149,9 @@ def sentence_to_vec(sentence_list: list, word_vec: Word2Vec, look_table: dict, a
 def load_word_vector_model(path: str):
     print("加载的词向量的路径: " + path)
     # 加载glove转换的模型: 保存的为文本形式
-    # word_embedding = KeyedVectors.load_word2vec_format
-    word_embedding = gensim.models.Word2Vec.load(path)
+    word_embedding = KeyedVectors.load_word2vec_format(path)
+    # word_embedding = gensim.models.Word2Vec.load(path)
+    print('load finished.')
     return word_embedding
 
 
@@ -159,7 +169,7 @@ def get_max_length_doc(path: str):
 
 
 def generate_doc_vector(doc: str, word_vec_model: Word2Vec):
-    words = doc.strip(" ")
+    words = doc.split(" ")
     word_vec = np.zeros(word_vec_model.vector_size)
     for word in words:
         word_vec += get_word_vector(word, word_vec_model)
@@ -192,21 +202,81 @@ def load_docs_labels(model):
 
 def train_model():
     x, y = load_docs_labels(word_vec_model)
+    print(x.shape)
     train_idx, test_idx = train_test_split(range(len(y)), test_size=0.2, stratify=y)
     train_x = x[train_idx, :]
     train_y = y[train_idx]
     test_x = x[test_idx, :]
     test_y = y[test_idx]
-    model = LogisticRegression(multi_class='multinomial', solver='lbfgs')
+    model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=1000)
     model.fit(train_x, train_y)
+    print("Training set score: {:.3f}".format(model.score(train_x, train_y)))
+    print("Test set score: {:.3f}".format(model.score(test_x, test_y)))
     return model
 
 
-def predict(doc: str):
+def predict(doc, model):
     doc_vec = generate_doc_vector(doc, word_vec_model)
-    result = model.predict(doc_vec)
-    return result
+    doc_vec = np.asarray(doc_vec).reshape(1, -1)
+    y = model['lr'].predict(doc_vec)
+    return y
 
 
-word_vec_model = load_word_vector_model('./word_embedding_model_100')
-# handle_news()
+# 计算各项评价指标
+def eval_model(y_true, y_pred, labels):
+    # 计算每个分类的Precision, Recall, f1, support
+    p, r, f1, s = precision_recall_fscore_support(y_true, y_pred)
+    # 计算总体的平均Precision, Recall, f1, support
+    tot_p = np.average(p, weights=s)
+    tot_r = np.average(r, weights=s)
+    tot_f1 = np.average(f1, weights=s)
+    tot_s = np.sum(s)
+    res1 = pd.DataFrame({
+        u'Label': labels,
+        u'Precision': p,
+        u'Recall': r,
+        u'F1': f1,
+        u'Support': s
+    })
+    res2 = pd.DataFrame({
+        u'Label': [u'总体'],
+        u'Precision': [tot_p],
+        u'Recall': [tot_r],
+        u'F1': [tot_f1],
+        u'Support': [tot_s]
+    })
+    res2.index = [999]
+    res = pd.concat([res1, res2])
+    return res[[u'Label', u'Precision', u'Recall', u'F1', u'Support']]
+
+
+def save_model(model, output_dir):
+    model_file = os.path.join(output_dir, u'model.pkl')
+    with open(model_file, 'wb') as outfile:
+        pickle.dump({
+            'y_encoder': np.asarray([0, 1]),
+            'lr': model
+        }, outfile)
+    return
+
+
+def load_model(path):
+    with open(path + 'model.pkl', 'rb') as infile:
+        lr_model = pickle.load(infile)
+    return lr_model
+
+
+stop_words = open(u'stopwords.txt', "r", encoding="utf-8").readlines()
+stop_words_list = [line.strip() for line in stop_words]
+# # handle_news(stop_words_list)
+word_vec_model = load_word_vector_model('./sgns.wiki.model')
+model = train_model()
+save_model(model, './')
+with open('./news_demo.txt', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+    doc = reduce(lambda x, y: x + y, lines)
+    doc = handle_doc(doc, stop_words_list)
+    f.close()
+model = load_model('./')
+result = predict(doc, model)
+print(result)
